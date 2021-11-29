@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import matplotlib.ticker as ticker
 import streamlit as st
+import optimiser as op
 
 
 st.title('Football Sports Betting (European Leagues)')
@@ -212,6 +213,7 @@ def backtest(df, batch, max_draw, min_win): # function to back test results and 
                 
     return pd.DataFrame.from_records(results)
 
+
 @st.cache(suppress_st_warning=True)
 def accumulator(home_teams, away_teams, fixtures, batch, *args, **kwargs): # function to calculate win, draw and lose probability for a selection of teams
     # the batch refers to the number of teams to include in a selection group for the accumulator bet
@@ -235,14 +237,14 @@ def accumulator(home_teams, away_teams, fixtures, batch, *args, **kwargs): # fun
             # check if the draw probability is less than the max value of the draws list
             # max_draw = max(draws) # get the maximum value of draw from the list
             # max_draw_index = draws.index(max_draw) # get the index of the max draw value
-            if win > min_val and win-draw >= 0.6: # check if the win prob is greater than the min value of the list
+            if win > min_val: # check if the win prob is greater than the min value of the list
                 print(f'win: {win} draw: {draw} loss: {loss}')
                 # pop the minimum win and maximum draw from the list
                 wins.pop(min_index) # remove the minimum value
                 draws.pop(min_index) # remove the maxmimum draw
                 selected_home.pop(min_index) # remove the home side from the selected home list
                 selected_away.pop(min_index) # remove the corresponding away side from the selected away list
-
+                
                 # update the win and draw list with new values
                 wins.append(win)
                 draws.append(draw)
@@ -397,6 +399,11 @@ def render_UI():
            results = backtest(fixtures, batch_size, max_draw, min_win)
            st.subheader('Simulation Results')
            st.dataframe(results)
+    
+    optimise_btn = sidebar.button('Derive Optimum Win-Draw Ratios')
+    if optimise_btn:
+        ops = op.Optimiser(fixtures, 3, 5)
+        ops.get_permutations()
 
 if __name__ == "__main__":
     render_UI()
