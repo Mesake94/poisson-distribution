@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import matplotlib.ticker as ticker
 import streamlit as st
+from streamlit.elements.dataframe_selector import DataFrameSelectorMixin
 import optimiser as op
 
 
@@ -20,13 +21,14 @@ sidebar = st.sidebar
 
 league_shortcut = {
         'Premier League':['premier-league-table','premier-league-results'], 'Championship':['championship-table','championship-results'],
-        'Seria A':['seria-a-table','seria-a-results'], 'Ligue 1':['ligue-1-table', 'ligue-1-results'],
+        'Seria A':['serie-a-table','serie-a-results'], 'Ligue 1':['ligue-1-table', 'ligue-1-results'],
         'Bundesliga':['bundesliga-table','bundesliga-results'], 'La Liga':['la-liga-table','la-liga-results'],
         'League One':['league-one-table','league-one-results'], 'League Two':['league-two-table','league-two-results'],
-        'Scottish Premiership':['scottish-premiership-table','scottish-premiership-results'],
+        'Scottish Premiership':['scottish-premier-table','scottish-premier-results'],
         'Scottish Championship':['scottish-championship-table','scottish-championship-results'],
         'Scottish League One':['scottish-league-one-table','scottish-league-one-results'],
-        'Scottish League Two':['scottish-league-two-table','scottish-league-two-results']
+        'Scottish League Two':['scottish-league-two-table','scottish-league-two-results'],
+        'Eredivisie':['eredivisie-table', 'eredivisie-results']
     }
 # FUNCTIONS TO CACHE
 @st.cache(suppress_st_warning=True)
@@ -215,12 +217,12 @@ def backtest(df, batch, max_draw, min_win): # function to back test results and 
 
 
 @st.cache(suppress_st_warning=True)
-def accumulator(home_teams, away_teams, fixtures, batch, *args, **kwargs): # function to calculate win, draw and lose probability for a selection of teams
+def accumulator(home_teams:list, away_teams:list, fixtures, batch:int, *args, **kwargs): # function to calculate win, draw and lose probability for a selection of teams
     # the batch refers to the number of teams to include in a selection group for the accumulator bet
     if len(home_teams) != len(away_teams) and len(home_teams) >= batch:
         st.warning('The number of home and away teams do not match!')
         return False
-
+    
     max_draw = kwargs['max_draw'] if 'max_draw' in kwargs.keys() else 0.1 # get the max draw ratio
     min_win = kwargs['min_win'] if 'min_win' in kwargs.keys() else 0.6 # get the min win ratio
     
@@ -281,7 +283,8 @@ def render_UI():
                 'Scottish Premiership',
                 'Scottish Championship',
                 'Scottish League One',
-                'Scottish League Two'
+                'Scottish League Two',
+                'Eredivisie',
             )
         )
         season = sidebar.selectbox('Select Season',
@@ -371,39 +374,19 @@ def render_UI():
         batch = st.slider('Select Batch Size', min_value=2, max_value=9)
         multiple_calculate = st.button('Calculate', key='multiple_calculate')
         if multiple_calculate and len(home_teams)==len(away_teams) and len(home_teams)>=1:
+            ops = op.Optimiser(fixtures, batch, 1)
+            outcomes = ops.get_best_fit({'Home':home_teams, 'Away':away_teams})
+            if outcomes:
+                for key, value in outcomes.items():
+                    c1, c2 = st.columns(2)
+                    for k_, v_ in value.items():
+                        if k_ == 'Selection':
+                            with c1:
+                                st.code(v_)
+                        elif k_ == 'win':
+                            with c2:
+                                st.metric('Win', value=v_)
             
-            win, draw, loss, selected_home, selected_away = accumulator(home_teams, away_teams, fixtures, batch)
-            w_col,d_col, l_col = st.columns(3)
-            with w_col:
-                st.metric('Win', value=win)
-            with d_col:
-                st.metric('Draw', value=draw)
-            with l_col:
-                st.metric('Loss', value=loss)
-            
-            st.dataframe(data=pd.DataFrame.from_dict({
-                'Home':selected_home, 'Away':selected_away
-            }))
-            
-
-    sidebar.subheader('Backtesting')
-    run_back_test = sidebar.checkbox('Run Back Test', key='backtest')
-
-    if run_back_test == True:
-        # home_side = sidebar.selectbox('Home Team', options=standings['Team'].tolist())
-        batch_size = sidebar.slider(label='Selet batch size', min_value=1, max_value=9)
-        max_draw = sidebar.slider(label='Maximum draw probability', min_value=0.0, max_value=0.3, step=0.01)
-        min_win = sidebar.slider(label='Minimum win probability', min_value=0.2, max_value=1.0, step=0.01)
-        run = sidebar.button('Run', key='run')
-        if run:
-           results = backtest(fixtures, batch_size, max_draw, min_win)
-           st.subheader('Simulation Results')
-           st.dataframe(results)
-    
-    optimise_btn = sidebar.button('Derive Optimum Win-Draw Ratios')
-    if optimise_btn:
-        ops = op.Optimiser(fixtures, 3, 5)
-        ops.get_permutations()
 
 if __name__ == "__main__":
     render_UI()
