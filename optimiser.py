@@ -159,8 +159,9 @@ class Optimiser:
                 away_team = selection['Away'][index_] # get the away team matched with the ith team
 
                 # get probabilities for the match up
-                win = self.outcome_probability({'Home':t_, 'Away':away_team})[1]
-                win_probability.append(win)
+                matrix, win, draw, loss = self.outcome_probability({'Home':t_, 'Away':away_team})
+                if (win - draw) > 0.6:
+                    win_probability.append(win)
 
             outcomes[k_] = {'Selection':teams, 'win':np.product(win_probability)}
 
