@@ -160,8 +160,7 @@ class Optimiser:
 
                 # get probabilities for the match up
                 matrix, win, draw, loss = self.outcome_probability({'Home':t_, 'Away':away_team})
-                if (win - draw) > 0.6:
-                    win_probability.append(win)
+                win_probability.append(win)
 
             outcomes[k_] = {'Selection':teams, 'win':np.product(win_probability)}
 
